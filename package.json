@@ -1,0 +1,27 @@
+{
+  "name": "natnael-portfolio-backend",
+  "version": "1.0.0",
+  "description": "Portfolio backend with CRUD APIs for profile, CV, projects and messages",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "portfolio",
+    "backend",
+    "crud",
+    "express"
+  ],
+  "author": "Natnael Zerihun",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

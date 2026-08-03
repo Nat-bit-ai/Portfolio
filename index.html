@@ -29,7 +29,7 @@
         </nav>
 
         <div class="nav-actions">
-          <a href="5th Batch CTC Program Schedule for Development.pdf" class="cv-link" download>
+          <a id="cv-download-link" href="5th Batch CTC Program Schedule for Development.pdf" class="cv-link" download>
             <span class="download-icon" aria-hidden="true">⬇</span>
             <span>Download CV</span>
           </a>
@@ -41,9 +41,9 @@
         <div class="hero-card">
           <div class="hero-left">
             <p class="eyebrow">Hi, I’m</p>
-            <h1>Natnael <span class="highlight">Zerihun</span></h1>
-            <p class="hero-role">Frontend Developer</p>
-            <p class="description">
+            <h1 id="profile-name">Natnael <span class="highlight">Zerihun</span></h1>
+            <p id="profile-title" class="hero-role">Frontend Developer</p>
+            <p id="profile-description" class="description">
               I build responsive and user-friendly webpages using HTML , CSS and JavaScript with a focus on improving performance and creating better design.
             </p>
             <div class="hero-actions">
@@ -79,7 +79,7 @@
           </div>
           <div class="hero-right">
             <div class="hero-image">
-              <img src="images/photo_2026-02-26_07-03-17.jpg" alt="Natnael profile" />
+              <img id="home-hero-image" src="images/photo_2026-02-26_07-03-17.jpg" alt="Natnael profile" />
             </div>
           </div>
         </div>
@@ -129,80 +129,7 @@
             <h3>Skills</h3>
             <a href="#skills" class="view-all-btn small">View All</a>
           </div>
-          <div class="skills-grid">
-            <div class="skill-chip" title="HTML" aria-label="HTML">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" width="40" height="40" alt="HTML icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">HTML</span>
-            </div>
-            <div class="skill-chip" title="CSS" aria-label="CSS">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" width="40" height="40" alt="CSS icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">CSS</span>
-            </div>
-            <div class="skill-chip" title="JavaScript" aria-label="JavaScript">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" width="40" height="40" alt="JavaScript icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">JavaScript</span>
-            </div>
-            <div class="skill-chip" title="Python" aria-label="Python">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="40" height="40" alt="Python icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">Python</span>
-            </div>
-            <div class="skill-chip" title="MySQL" aria-label="MySQL">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" width="40" height="40" alt="MySQL icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">MySQL</span>
-            </div>
-            <div class="skill-chip" title="C++" aria-label="C++">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg" width="40" height="40" alt="C++ icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">C++</span>
-            </div>
-            <div class="skill-chip" title="PHP" aria-label="PHP">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" width="40" height="40" alt="PHP icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">PHP</span>
-            </div>
-            <div class="skill-chip" title="Git" aria-label="Git">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" width="40" height="40" alt="Git icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">Git</span>
-            </div>
-            <div class="skill-chip" title="GitHub" aria-label="GitHub">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="40" height="40" alt="GitHub icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">GitHub</span>
-            </div>
-            <div class="skill-chip" title="Java" aria-label="Java">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="40" height="40" alt="Java icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">Java</span>
-            </div>
-            <div class="skill-chip" title="React" aria-label="React">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="40" height="40" alt="React icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">React</span>
-            </div>
-            <div class="skill-chip" title="Tailwind CSS" aria-label="Tailwind CSS">
-              <span class="tech-icon">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg" width="40" height="40" alt="Tailwind CSS icon" aria-hidden="true" />
-              </span>
-              <span class="sr-only">Tailwind CSS</span>
-            </div>
-          </div>
+          <div id="tech-stack-grid" class="skills-grid"></div>
         </div>
       </div>
     </section>
@@ -268,17 +195,23 @@
           <button type="submit" class="primary-btn">Send Message</button>
         </form>
         <div class="contact-info">
-          <div class="info-block"><strong>Email</strong><p>nathyzer21@gmail.com</p></div>
-          <div class="info-block"><strong>Phone</strong><p>+251 967 323 308</p></div>
-          <div class="info-block"><strong>Location</strong><p>Addis Ababa, Ethiopia</p></div>
+          <div class="info-block"><strong>Email</strong><p id="contact-email">nathyzer21@gmail.com</p></div>
+          <div class="info-block"><strong>Phone</strong><p id="contact-phone">+251 967 323 308</p></div>
+          <div class="info-block"><strong>Location</strong><p id="contact-location">Addis Ababa, Ethiopia</p></div>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>© 2025 Natnael Zerihun. Built with modern web design.</p>
-    <a href="#home" class="back-to-top">Back to Top</a>
+    <div class="footer-admin-box">
+      <span>Edit portfolio</span>
+      <button type="button" id="admin-link" class="admin-btn footer-admin-btn">Open Editor</button>
+    </div>
+    <div class="footer-meta">
+      <p>© 2025 Natnael Zerihun. Built with modern web design.</p>
+      <a href="#home" class="back-to-top">Back to Top</a>
+    </div>
   </footer>
 
   <a href="#home" class="back-to-top-btn" aria-label="Scroll back to top">↑</a>
