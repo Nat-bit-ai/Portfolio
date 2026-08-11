@@ -499,18 +499,27 @@
       }
 
       async function loadProfile() {
-        const response = await fetch('/api/profile');
-        const profile = await response.json();
+        try {
+          const response = await fetch('/api/profile');
+          const profile = await response.json();
 
-        document.getElementById('profile-name').value = profile.name || '';
-        document.getElementById('profile-title').value = profile.title || '';
-        document.getElementById('profile-description').value = profile.description || '';
-        document.getElementById('profile-email').value = profile.email || '';
-        document.getElementById('profile-phone').value = profile.phone || '';
-        document.getElementById('profile-location').value = profile.location || '';
-        document.getElementById('profile-github').value = profile.github || '';
+          if (!response.ok) {
+            throw new Error(profile.error || `Server returned ${response.status}`);
+          }
 
-        renderCv(profile.cv);
+          document.getElementById('profile-name').value = profile.name || '';
+          document.getElementById('profile-title').value = profile.title || '';
+          document.getElementById('profile-description').value = profile.description || '';
+          document.getElementById('profile-email').value = profile.email || '';
+          document.getElementById('profile-phone').value = profile.phone || '';
+          document.getElementById('profile-location').value = profile.location || '';
+          document.getElementById('profile-github').value = profile.github || '';
+
+          renderCv(profile.cv);
+        } catch (error) {
+          console.error('Failed to load profile:', error);
+          showStatus('profile-status', `Could not load profile (${error.message}). Check the server/database connection.`, true);
+        }
       }
 
       function renderCv(cv) {
@@ -526,66 +535,93 @@
       }
 
       async function loadProjects() {
-        const response = await fetch('/api/projects');
-        const projects = await response.json();
+        try {
+          const response = await fetch('/api/projects');
+          const projects = await response.json();
 
-        if (!projectSelect) return;
-
-        projectSelect.innerHTML = '<option value="">Choose a project</option>' + projects.map((project) => `
-          <option value="${project.id}">${project.title}</option>
-        `).join('');
-
-        if (!projects.length) {
-          resetProjectForm();
-          return;
-        }
-
-        if (projectForm.dataset.editingId) {
-          const selectedProject = projects.find((project) => project.id === projectForm.dataset.editingId);
-          if (selectedProject) {
-            fillProjectForm(selectedProject);
+          if (!response.ok) {
+            throw new Error(projects.error || `Server returned ${response.status}`);
           }
+
+          if (!projectSelect) return;
+
+          projectSelect.innerHTML = '<option value="">Choose a project</option>' + projects.map((project) => `
+            <option value="${project.id}">${project.title}</option>
+          `).join('');
+
+          if (!projects.length) {
+            resetProjectForm();
+            return;
+          }
+
+          if (projectForm.dataset.editingId) {
+            const selectedProject = projects.find((project) => project.id === projectForm.dataset.editingId);
+            if (selectedProject) {
+              fillProjectForm(selectedProject);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load projects:', error);
+          showStatus('project-status', `Could not load projects (${error.message}).`, true);
         }
       }
 
       async function loadHomepageSettings() {
-        const response = await fetch('/api/homepage');
-        const homepage = await response.json();
+        try {
+          const response = await fetch('/api/homepage');
+          const homepage = await response.json();
 
-        currentHeroPreview.innerHTML = homepage.heroImage
-          ? `<img src="${homepage.heroImage}" alt="Current hero image" />`
-          : '<p class="muted">No hero image set yet.</p>';
+          if (!response.ok) {
+            throw new Error(homepage.error || `Server returned ${response.status}`);
+          }
 
-        const selectedNames = (homepage.techStacks || []).map((stack) => stack.name);
-        renderTechStackCheckboxes(selectedNames);
+          currentHeroPreview.innerHTML = homepage.heroImage
+            ? `<img src="${homepage.heroImage}" alt="Current hero image" />`
+            : '<p class="muted">No hero image set yet.</p>';
+
+          const selectedNames = (homepage.techStacks || []).map((stack) => stack.name);
+          renderTechStackCheckboxes(selectedNames);
+        } catch (error) {
+          console.error('Failed to load homepage settings:', error);
+          showStatus('homepage-status', `Could not load homepage settings (${error.message}).`, true);
+        }
       }
 
       async function loadMessages() {
-        const response = await fetch('/api/messages');
-        const messages = await response.json();
+        try {
+          const response = await fetch('/api/messages');
+          const messages = await response.json();
 
-        if (!messages.length) {
-          messagesList.innerHTML = '<p class="muted">No messages yet.</p>';
-          return;
-        }
+          if (!response.ok) {
+            throw new Error(messages.error || `Server returned ${response.status}`);
+          }
 
-        messagesList.innerHTML = messages.map((message) => `
-          <article class="message-item">
-            <h3>${message.name}</h3>
-            <p class="muted">${message.email}</p>
-            <p>${message.message}</p>
-            <div class="row">
-              <button class="danger" data-message-id="${message.id}" type="button">Delete</button>
-            </div>
-          </article>
-        `).join('');
+          if (!messages.length) {
+            messagesList.innerHTML = '<p class="muted">No messages yet.</p>';
+            return;
+          }
 
-        messagesList.querySelectorAll('[data-message-id]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            await fetch(`/api/messages/${button.dataset.messageId}`, { method: 'DELETE' });
-            loadMessages();
+          messagesList.innerHTML = messages.map((message) => `
+            <article class="message-item">
+              <h3>${message.name}</h3>
+              <p class="muted">${message.email}</p>
+              <p>${message.message}</p>
+              <div class="row">
+                <button class="danger" data-message-id="${message.id}" type="button">Delete</button>
+              </div>
+            </article>
+          `).join('');
+
+          messagesList.querySelectorAll('[data-message-id]').forEach((button) => {
+            button.addEventListener('click', async () => {
+              await fetch(`/api/messages/${button.dataset.messageId}`, { method: 'DELETE' });
+              loadMessages();
+            });
           });
-        });
+        } catch (error) {
+          console.error('Failed to load messages:', error);
+          messagesList.innerHTML = `<p class="muted">Could not load messages (${error.message}).</p>`;
+        }
       }
 
       profileForm.addEventListener('submit', async (event) => {
@@ -603,7 +639,8 @@
           showStatus('profile-status', 'Profile updated successfully.');
           loadProfile();
         } else {
-          showStatus('profile-status', 'Failed to update profile.', true);
+          const error = await response.json().catch(() => ({}));
+          showStatus('profile-status', error.error || `Failed to update profile (server returned ${response.status}).`, true);
         }
       });
 

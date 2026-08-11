@@ -1,5 +1,9 @@
 
-CREATE DATABASE Portfolio;
+-- IMPORTANT: quoted so the database name keeps its exact case ("Portfolio"),
+-- matching PGDATABASE in .env. Unquoted names get lower-cased by Postgres
+-- (CREATE DATABASE Portfolio; actually creates "portfolio"), which then
+-- doesn't match PGDATABASE=Portfolio and every query fails to connect.
+CREATE DATABASE "Portfolio";
 
 
 CREATE TABLE IF NOT EXISTS profile (
