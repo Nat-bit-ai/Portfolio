@@ -48,13 +48,32 @@ async function loadHomepageSettings() {
   }
 }
 
+function renderProfileName(fullName) {
+  if (!profileName) return;
+
+  const name = (fullName || 'Natnael Zerihun').trim();
+  const words = name.split(/\s+/);
+  const firstName = words.shift() || '';
+  const lastName = words.join(' ');
+
+  profileName.textContent = '';
+  profileName.appendChild(document.createTextNode(firstName + (lastName ? ' ' : '')));
+
+  if (lastName) {
+    const highlight = document.createElement('span');
+    highlight.className = 'highlight';
+    highlight.textContent = lastName;
+    profileName.appendChild(highlight);
+  }
+}
+
 async function loadProfile() {
   try {
     const response = await fetch('/api/profile');
     if (!response.ok) throw new Error('Failed to load profile');
     const profile = await response.json();
 
-    if (profileName) profileName.textContent = profile.name || 'Natnael Zerihun';
+    if (profileName) renderProfileName(profile.name);
     if (profileTitle) profileTitle.textContent = profile.title || 'Frontend Developer';
     if (profileDescription) profileDescription.textContent = profile.description || '';
     if (contactEmail) contactEmail.textContent = profile.email || 'nathyzer21@gmail.com';

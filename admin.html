@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
       :root {
         --bg: #020617;
@@ -22,9 +25,13 @@
 
       body {
         margin: 0;
-        font-family: Arial, sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: linear-gradient(135deg, #020617, #111827);
         color: var(--text);
+      }
+
+      h1, h2, h3 {
+        font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
       }
 
       .container {
@@ -44,12 +51,44 @@
         flex-wrap: wrap;
       }
 
-      .header a {
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .header a,
+      .logout-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
         color: var(--text);
         text-decoration: none;
         border: 1px solid var(--border);
         padding: 10px 18px;
         border-radius: 999px;
+        line-height: 1;
+        height: 42px;
+      }
+
+      .logout-form {
+        margin: 0;
+      }
+
+      .logout-btn {
+        width: auto;
+        margin: 0;
+        background: rgba(255, 255, 255, 0.08);
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+      }
+
+      .logout-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        transform: translateY(-1px);
       }
 
       .grid {
@@ -80,6 +119,13 @@
         padding: 12px 14px;
         margin-top: 8px;
         font: inherit;
+      }
+
+      button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
       }
 
       input, textarea {
@@ -133,6 +179,12 @@
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+      }
+
+      .row button {
+        width: auto;
+        flex: 1 1 auto;
+        min-width: 130px;
       }
 
       .status {
@@ -202,7 +254,12 @@
     <div class="container">
       <div class="header">
         <h1>Portfolio Admin Panel</h1>
-        <a href="/">Back to Portfolio</a>
+        <div class="header-actions">
+          <a href="/">Back to Portfolio</a>
+          <form method="POST" action="/api/admin/logout" class="logout-form">
+            <button type="submit" class="logout-btn">Log Out</button>
+          </form>
+        </div>
       </div>
 
       <div class="grid">
@@ -340,9 +397,9 @@
             </label>
 
             <div class="row">
-              <button type="button" id="update-project-btn" class="secondary" style="display:none;">Update Selected</button>
-              <button type="button" id="delete-project-btn" class="danger" style="display:none;">Delete Selected</button>
-              <button type="button" id="cancel-project-edit" class="secondary" style="display:none;">Cancel</button>
+              <button type="button" id="update-project-btn" class="secondary">Update Selected</button>
+              <button type="button" id="delete-project-btn" class="danger">Delete Selected</button>
+              <button type="button" id="cancel-project-edit" class="secondary">Cancel</button>
             </div>
           </form>
         </section>
@@ -367,8 +424,6 @@
       const currentHeroPreview = document.getElementById('current-hero-preview');
       const techStackCheckboxes = document.getElementById('tech-stack-checkboxes');
 
-      // Fixed catalog of selectable tech stacks. Add/remove entries here to
-      // change what shows up as checkboxes in the admin panel.
       const TECH_STACK_CATALOG = [
         { name: 'HTML', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
         { name: 'CSS', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg' },
@@ -419,9 +474,6 @@
         projectForm.reset();
         projectForm.dataset.editingId = '';
         projectSubmitBtn.textContent = 'Upload Project';
-        cancelProjectEditBtn.style.display = 'none';
-        updateProjectBtn.style.display = 'none';
-        deleteProjectBtn.style.display = 'none';
         if (projectSelect) {
           projectSelect.value = '';
         }
@@ -444,9 +496,6 @@
         }
 
         projectForm.dataset.editingId = project.id;
-        cancelProjectEditBtn.style.display = 'inline-block';
-        updateProjectBtn.style.display = 'inline-block';
-        deleteProjectBtn.style.display = 'inline-block';
       }
 
       async function loadProfile() {

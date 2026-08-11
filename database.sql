@@ -1,5 +1,3 @@
--- PostgreSQL database setup for the portfolio app
--- Run this in psql or pgAdmin
 
 CREATE DATABASE Portfolio;
 

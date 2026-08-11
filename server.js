@@ -2,36 +2,150 @@ require('dotenv').config();
 
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { Pool } = require('pg');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const rootDir = __dirname;
-const uploadsDir = path.join(rootDir, 'uploads');
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
-// Fail fast if the .env file is missing required values, instead of
-// silently connecting with a hardcoded fallback password.
+// ---------------------------------------------------------------------------
+// Admin auth
+// ---------------------------------------------------------------------------
+// The password can be overridden with the ADMIN_PASSWORD env var. Set that in
+// your host's dashboard (Vercel -> Project -> Settings -> Environment Variables)
+// instead of relying on the fallback below once this code is in a public repo.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '@Nathy1821';
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'natnael-portfolio-admin-secret';
+const ADMIN_COOKIE = 'admin_token';
+const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function parseCookies(req) {
+  const header = req.headers.cookie;
+  const cookies = {};
+  if (!header) return cookies;
+  header.split(';').forEach((pair) => {
+    const idx = pair.indexOf('=');
+    if (idx === -1) return;
+    const key = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    cookies[key] = decodeURIComponent(value);
+  });
+  return cookies;
+}
+
+function base64url(input) {
+  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function signToken(payload) {
+  const data = base64url(JSON.stringify(payload));
+  const sig = crypto.createHmac('sha256', ADMIN_SECRET).update(data).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${data}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+  const [data, sig] = token.split('.');
+  const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(data).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const sigBuffer = Buffer.from(sig);
+  const expectedBuffer = Buffer.from(expectedSig);
+  if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64').toString('utf8'));
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isAdminRequest(req) {
+  const cookies = parseCookies(req);
+  const payload = verifyToken(cookies[ADMIN_COOKIE]);
+  return Boolean(payload && payload.role === 'admin');
+}
+
+function requireAdmin(req, res, next) {
+  if (isAdminRequest(req)) return next();
+  return res.status(401).json({ error: 'Admin authentication required.' });
+}
+
+function setAdminCookie(res, token, maxAgeSeconds) {
+  const parts = [
+    `${ADMIN_COOKIE}=${encodeURIComponent(token)}`,
+    'HttpOnly',
+    'Path=/',
+    `Max-Age=${maxAgeSeconds}`,
+    'SameSite=Lax'
+  ];
+  if (IS_VERCEL) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function renderLoginPage(errorMessage) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Login</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  form { background: rgba(15,23,42,0.9); border: 1px solid rgba(148,163,184,0.2); border-radius: 16px; padding: 32px; width: 280px; box-shadow: 0 18px 30px rgba(2, 6, 23, 0.35); }
+  h1 { font-size: 1.2rem; margin: 0 0 16px; }
+  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: rgba(15,23,42,0.7); color: #e2e8f0; margin: 8px 0 16px; font: inherit; }
+  button { width: 100%; padding: 10px 12px; border-radius: 10px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; font-weight: 700; cursor: pointer; font: inherit; }
+  .error { color: #fca5a5; font-size: 0.85rem; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+  <form method="POST" action="/api/admin/login">
+    <h1>Admin Login</h1>
+    ${errorMessage ? `<p class="error">${errorMessage}</p>` : ''}
+    <input type="password" name="password" placeholder="Password" required autofocus />
+    <button type="submit">Log In</button>
+  </form>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Database
+// ---------------------------------------------------------------------------
 const REQUIRED_ENV_VARS = ['PGUSER', 'PGPASSWORD', 'PGDATABASE'];
 const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
 if (missingEnvVars.length > 0) {
-  console.error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}`);
-  console.error('Copy .env.example to .env and fill in your local Postgres credentials.');
-  process.exit(1);
+  console.error(`Missing required environment variable(s): ${missingEnvVars.join(', ')}. Set these in your hosting provider's environment settings -- the app will return 500s until they're set.`);
 }
 
-const DB_NAME = process.env.PGDATABASE;
-
-const adminPool = new Pool({
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  host: process.env.PGHOST || 'localhost',
-  port: Number(process.env.PGPORT) || 5432,
-  database: process.env.ADMIN_DATABASE || 'postgres'
-});
+const pgHost = process.env.PGHOST || 'localhost';
+const isLocalHost = pgHost === 'localhost' || pgHost === '127.0.0.1';
+const sslEnabled = process.env.PGSSL ? process.env.PGSSL === 'true' : !isLocalHost;
 
 let pool;
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      user: process.env.PGUSER,
+      password: process.env.PGPASSWORD,
+      host: pgHost,
+      port: Number(process.env.PGPORT) || 5432,
+      database: process.env.PGDATABASE,
+      ssl: sslEnabled ? { rejectUnauthorized: false } : false
+    });
+  }
+  return pool;
+}
+
+async function query(sql, params = []) {
+  return getPool().query(sql, params);
+}
 
 const DEFAULT_HOMEPAGE_SETTINGS = {
   heroImage: '/images/photo_2026-02-26_07-03-17.jpg',
@@ -77,7 +191,6 @@ function parseTechStacks(rawValue) {
       return parseTechStacks(parsed);
     }
   } catch (error) {
-    // Ignore invalid JSON and parse line-by-line below.
   }
 
   return trimmed
@@ -94,35 +207,7 @@ function parseTechStacks(rawValue) {
     .filter((item) => item.name);
 }
 
-async function ensureDatabase() {
-  const { rows } = await adminPool.query('SELECT 1 FROM pg_database WHERE datname = $1', [DB_NAME]);
-
-  if (rows.length === 0) {
-    // Database names can't be parameterized, so this is validated against
-    // the trusted .env value only - never against user input.
-    await adminPool.query(`CREATE DATABASE "${DB_NAME}"`);
-  }
-
-  pool = new Pool({
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    host: process.env.PGHOST || 'localhost',
-    port: Number(process.env.PGPORT) || 5432,
-    database: DB_NAME
-  });
-}
-
-async function query(sql, params = []) {
-  if (!pool) {
-    await ensureDatabase();
-  }
-
-  return pool.query(sql, params);
-}
-
 async function initializeDatabase() {
-  await ensureDatabase();
-
   await query(`
     CREATE TABLE IF NOT EXISTS profile (
       id SERIAL PRIMARY KEY,
@@ -186,8 +271,8 @@ async function initializeDatabase() {
       '+251 967 323 308',
       'Addis Ababa, Ethiopia',
       'https://github.com/Nat-bit-ai',
-      '5th Batch CTC Program Schedule for Development.pdf',
-      '/5th Batch CTC Program Schedule for Development.pdf'
+      '',
+      ''
     ]);
   }
 
@@ -198,7 +283,7 @@ async function initializeDatabase() {
       VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10), ($11, $12, $13, $14, $15)
     `, [
       'National Voting System', 'Gov Tech', 'A secure digital voting platform built for nationwide elections and easy voter access.', 'images/Screenshot 2026-07-29 020836.png', '#projects',
-      'Wardline Patient Portal', 'Healthcare', 'A patient portal interface for appointments, lab results, and secure medical communication.', 'images/Screenshot 2026-07-29 021550.png', '#projects',
+      'E-Commerce App', 'E-Commerce', 'An online store with product browsing, cart management, and a secure checkout flow, built for a smooth shopping experience on any device.', 'images/Screenshot 2026-07-29 021550.png', '#projects',
       'Portfolio Website', 'Portfolio', 'This portfolio site showcases my design approach, visual UI, and project storytelling.', 'images/Screenshot 2026-07-29 023506.png', '#projects'
     ]);
   }
@@ -212,60 +297,67 @@ async function initializeDatabase() {
   }
 }
 
-function ensureUploadsDirectory() {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+let dbInitPromise = null;
+function ensureInitialized() {
+  if (!dbInitPromise) {
+    dbInitPromise = initializeDatabase().catch((error) => {
+      dbInitPromise = null; // allow a retry on the next request instead of staying broken forever
+      throw error;
+    });
+  }
+  return dbInitPromise;
 }
 
-const cvStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname) || '.pdf';
-    cb(null, `cv-${Date.now()}${extension}`);
-  }
-});
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-const projectStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname) || '.png';
-    cb(null, `project-${Date.now()}${extension}`);
-  }
-});
+// ---------------------------------------------------------------------------
+// Uploads (kept in memory, then stored as data URLs in Postgres -- Vercel's
+// filesystem is read-only/ephemeral outside /tmp, so writing to disk like the
+// old diskStorage setup did won't survive between requests there).
+// ---------------------------------------------------------------------------
+const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-const cvUpload = multer({
-  storage: cvStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
+function toDataUrl(file) {
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
 
-const projectUpload = multer({
-  storage: projectStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
-
-const homepageStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname) || '.png';
-    cb(null, `homepage-${Date.now()}${extension}`);
-  }
-});
-
-const homepageUpload = multer({
-  storage: homepageStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
-
+// ---------------------------------------------------------------------------
+// App setup
+// ---------------------------------------------------------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-ensureUploadsDirectory();
-app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(rootDir));
+app.use(asyncHandler(async (req, res, next) => {
+  await ensureInitialized();
+  next();
+}));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-app.get('/api/profile', async (req, res) => {
+// --- Admin auth routes ---
+app.post('/api/admin/login', (req, res) => {
+  const password = (req.body && req.body.password) || '';
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).send(renderLoginPage('Incorrect password.'));
+  }
+  const token = signToken({ role: 'admin', exp: Date.now() + ADMIN_TOKEN_TTL_MS });
+  setAdminCookie(res, token, Math.floor(ADMIN_TOKEN_TTL_MS / 1000));
+  return res.redirect('/admin');
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  setAdminCookie(res, '', 0);
+  return res.redirect('/admin');
+});
+
+app.get('/api/admin/session', (req, res) => {
+  res.json({ authenticated: isAdminRequest(req) });
+});
+
+// --- Public read routes ---
+app.get('/api/profile', asyncHandler(async (req, res) => {
   const result = await query('SELECT * FROM profile ORDER BY id DESC LIMIT 1');
   const profile = result.rows[0];
 
@@ -283,9 +375,41 @@ app.get('/api/profile', async (req, res) => {
     github: profile.github,
     cv: profile.cv_url ? { fileName: profile.cv_file_name, url: profile.cv_url } : { fileName: '', url: '' }
   });
-});
+}));
 
-app.put('/api/profile', async (req, res) => {
+app.get('/api/cv', asyncHandler(async (req, res) => {
+  const result = await query('SELECT cv_file_name, cv_url FROM profile ORDER BY id DESC LIMIT 1');
+  const profile = result.rows[0];
+
+  if (!profile) {
+    return res.json({ fileName: '', url: '' });
+  }
+
+  return res.json({
+    fileName: profile.cv_file_name || '',
+    url: profile.cv_url || ''
+  });
+}));
+
+app.get('/api/projects', asyncHandler(async (req, res) => {
+  const result = await query('SELECT * FROM projects ORDER BY created_at DESC');
+  res.json(result.rows);
+}));
+
+app.get('/api/homepage', asyncHandler(async (req, res) => {
+  const result = await query('SELECT value FROM site_settings WHERE key = $1', ['homepage']);
+  const homepage = result.rowCount > 0 ? result.rows[0].value : DEFAULT_HOMEPAGE_SETTINGS;
+
+  res.json({
+    heroImage: homepage.heroImage || DEFAULT_HOMEPAGE_SETTINGS.heroImage,
+    techStacks: Array.isArray(homepage.techStacks) && homepage.techStacks.length
+      ? homepage.techStacks
+      : DEFAULT_HOMEPAGE_SETTINGS.techStacks
+  });
+}));
+
+// --- Admin-only write routes ---
+app.put('/api/profile', requireAdmin, asyncHandler(async (req, res) => {
   const profile = req.body;
   const existing = await query('SELECT * FROM profile ORDER BY id DESC LIMIT 1');
 
@@ -331,23 +455,9 @@ app.put('/api/profile', async (req, res) => {
   ]);
 
   return res.json(updated.rows[0]);
-});
+}));
 
-app.get('/api/cv', async (req, res) => {
-  const result = await query('SELECT cv_file_name, cv_url FROM profile ORDER BY id DESC LIMIT 1');
-  const profile = result.rows[0];
-
-  if (!profile) {
-    return res.json({ fileName: '', url: '' });
-  }
-
-  return res.json({
-    fileName: profile.cv_file_name || '',
-    url: profile.cv_url || ''
-  });
-});
-
-app.post('/api/cv', cvUpload.single('cvFile'), async (req, res) => {
+app.post('/api/cv', requireAdmin, memoryUpload.single('cvFile'), asyncHandler(async (req, res) => {
   const uploaded = req.file;
 
   if (uploaded) {
@@ -358,7 +468,7 @@ app.post('/api/cv', cvUpload.single('cvFile'), async (req, res) => {
           updated_at = NOW()
       WHERE id = (SELECT id FROM profile ORDER BY id DESC LIMIT 1)
       RETURNING cv_file_name, cv_url
-    `, [uploaded.originalname, `/uploads/${uploaded.filename}`]);
+    `, [uploaded.originalname, toDataUrl(uploaded)]);
 
     return res.json({
       fileName: updated.rows[0].cv_file_name,
@@ -388,15 +498,10 @@ app.post('/api/cv', cvUpload.single('cvFile'), async (req, res) => {
   }
 
   return res.status(400).json({ error: 'No CV file uploaded.' });
-});
+}));
 
-app.get('/api/projects', async (req, res) => {
-  const result = await query('SELECT * FROM projects ORDER BY created_at DESC');
-  res.json(result.rows);
-});
-
-app.post('/api/projects', projectUpload.single('projectImage'), async (req, res) => {
-  const payload = req.file ? { ...req.body, image: `/uploads/${req.file.filename}` } : req.body;
+app.post('/api/projects', requireAdmin, memoryUpload.single('projectImage'), asyncHandler(async (req, res) => {
+  const payload = req.file ? { ...req.body, image: toDataUrl(req.file) } : req.body;
   const { title, tag, description, image, link } = payload;
 
   if (!title || !description) {
@@ -416,16 +521,16 @@ app.post('/api/projects', projectUpload.single('projectImage'), async (req, res)
   ]);
 
   return res.status(201).json(project.rows[0]);
-});
+}));
 
-app.put('/api/projects/:id', projectUpload.single('projectImage'), async (req, res) => {
+app.put('/api/projects/:id', requireAdmin, memoryUpload.single('projectImage'), asyncHandler(async (req, res) => {
   const existing = await query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
 
   if (existing.rowCount === 0) {
     return res.status(404).json({ error: 'Project not found.' });
   }
 
-  const payload = req.file ? { ...req.body, image: `/uploads/${req.file.filename}` } : req.body;
+  const payload = req.file ? { ...req.body, image: toDataUrl(req.file) } : req.body;
   const project = await query(`
     UPDATE projects
     SET title = $1,
@@ -446,9 +551,9 @@ app.put('/api/projects/:id', projectUpload.single('projectImage'), async (req, r
   ]);
 
   return res.json(project.rows[0]);
-});
+}));
 
-app.delete('/api/projects/:id', async (req, res) => {
+app.delete('/api/projects/:id', requireAdmin, asyncHandler(async (req, res) => {
   const result = await query('DELETE FROM projects WHERE id = $1 RETURNING *', [req.params.id]);
 
   if (result.rowCount === 0) {
@@ -456,26 +561,14 @@ app.delete('/api/projects/:id', async (req, res) => {
   }
 
   return res.json({ message: 'Project deleted successfully.' });
-});
+}));
 
-app.get('/api/homepage', async (req, res) => {
-  const result = await query('SELECT value FROM site_settings WHERE key = $1', ['homepage']);
-  const homepage = result.rowCount > 0 ? result.rows[0].value : DEFAULT_HOMEPAGE_SETTINGS;
-
-  res.json({
-    heroImage: homepage.heroImage || DEFAULT_HOMEPAGE_SETTINGS.heroImage,
-    techStacks: Array.isArray(homepage.techStacks) && homepage.techStacks.length
-      ? homepage.techStacks
-      : DEFAULT_HOMEPAGE_SETTINGS.techStacks
-  });
-});
-
-app.put('/api/homepage', homepageUpload.single('homepageImage'), async (req, res) => {
+app.put('/api/homepage', requireAdmin, memoryUpload.single('homepageImage'), asyncHandler(async (req, res) => {
   const existing = await query('SELECT value FROM site_settings WHERE key = $1', ['homepage']);
   const current = existing.rowCount > 0 ? existing.rows[0].value : DEFAULT_HOMEPAGE_SETTINGS;
 
   const payload = {
-    heroImage: req.file ? `/uploads/${req.file.filename}` : (req.body.heroImage || current.heroImage || DEFAULT_HOMEPAGE_SETTINGS.heroImage),
+    heroImage: req.file ? toDataUrl(req.file) : (req.body.heroImage || current.heroImage || DEFAULT_HOMEPAGE_SETTINGS.heroImage),
     techStacks: parseTechStacks(req.body.techStacks || current.techStacks || DEFAULT_HOMEPAGE_SETTINGS.techStacks)
   };
 
@@ -488,14 +581,14 @@ app.put('/api/homepage', homepageUpload.single('homepageImage'), async (req, res
   `, ['homepage', JSON.stringify(payload)]);
 
   res.json(updated.rows[0].value);
-});
+}));
 
-app.get('/api/messages', async (req, res) => {
+app.get('/api/messages', requireAdmin, asyncHandler(async (req, res) => {
   const result = await query('SELECT * FROM messages ORDER BY created_at DESC');
   res.json(result.rows);
-});
+}));
 
-app.post('/api/messages', async (req, res) => {
+app.post('/api/messages', asyncHandler(async (req, res) => {
   const { name, email, message } = req.body;
 
   if (!name || !email || !message) {
@@ -509,9 +602,9 @@ app.post('/api/messages', async (req, res) => {
   `, [name, email, message]);
 
   return res.status(201).json(result.rows[0]);
-});
+}));
 
-app.delete('/api/messages/:id', async (req, res) => {
+app.delete('/api/messages/:id', requireAdmin, asyncHandler(async (req, res) => {
   const result = await query('DELETE FROM messages WHERE id = $1 RETURNING *', [req.params.id]);
 
   if (result.rowCount === 0) {
@@ -519,9 +612,13 @@ app.delete('/api/messages/:id', async (req, res) => {
   }
 
   return res.json({ message: 'Message deleted successfully.' });
-});
+}));
 
+// --- Admin page (password-gated) ---
 app.get('/admin', (req, res) => {
+  if (!isAdminRequest(req)) {
+    return res.status(401).send(renderLoginPage());
+  }
   return res.sendFile(path.join(rootDir, 'admin.html'));
 });
 
@@ -533,25 +630,33 @@ app.get('*', (req, res) => {
   return res.sendFile(path.join(rootDir, 'index.html'));
 });
 
-async function startServer() {
-  try {
-    await initializeDatabase();
-    const server = app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
-    });
+// Final error handler -- turns any thrown/rejected error into JSON instead of
+// crashing the whole function (which is what produced the 500 on Vercel).
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Internal server error.' });
+});
 
-    server.on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Stop the old Node process and restart the app.`);
-        process.exit(1);
-      }
+if (!IS_VERCEL) {
+  ensureInitialized()
+    .then(() => {
+      const server = app.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+      });
 
-      throw error;
+      server.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+          console.error(`Port ${PORT} is already in use. Stop the old Node process and restart the app.`);
+          process.exit(1);
+        }
+        throw error;
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to initialize PostgreSQL database:', error.message);
+      process.exit(1);
     });
-  } catch (error) {
-    console.error('Failed to initialize PostgreSQL database:', error.message);
-    process.exit(1);
-  }
 }
 
-startServer();
+module.exports = app;
