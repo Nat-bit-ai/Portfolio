@@ -641,10 +641,13 @@ app.get('*', (req, res) => {
 
 // Final error handler -- turns any thrown/rejected error into JSON instead of
 // crashing the whole function (which is what produced the 500 on Vercel).
+// Includes err.message so you can see the real Postgres error (e.g. "database
+// does not exist", "connection refused", "password authentication failed")
+// straight from the admin page instead of only in server logs.
 app.use((err, req, res, next) => {
   console.error(err);
   if (res.headersSent) return next(err);
-  res.status(500).json({ error: 'Internal server error.' });
+  res.status(500).json({ error: 'Internal server error.', detail: err.message });
 });
 
 if (!IS_VERCEL) {

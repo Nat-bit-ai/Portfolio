@@ -504,7 +504,7 @@
           const profile = await response.json();
 
           if (!response.ok) {
-            throw new Error(profile.error || `Server returned ${response.status}`);
+            throw new Error(profile.detail || profile.error || `Server returned ${response.status}`);
           }
 
           document.getElementById('profile-name').value = profile.name || '';
@@ -540,7 +540,7 @@
           const projects = await response.json();
 
           if (!response.ok) {
-            throw new Error(projects.error || `Server returned ${response.status}`);
+            throw new Error(projects.detail || projects.error || `Server returned ${response.status}`);
           }
 
           if (!projectSelect) return;
@@ -572,7 +572,7 @@
           const homepage = await response.json();
 
           if (!response.ok) {
-            throw new Error(homepage.error || `Server returned ${response.status}`);
+            throw new Error(homepage.detail || homepage.error || `Server returned ${response.status}`);
           }
 
           currentHeroPreview.innerHTML = homepage.heroImage
@@ -593,7 +593,7 @@
           const messages = await response.json();
 
           if (!response.ok) {
-            throw new Error(messages.error || `Server returned ${response.status}`);
+            throw new Error(messages.detail || messages.error || `Server returned ${response.status}`);
           }
 
           if (!messages.length) {
@@ -640,7 +640,7 @@
           loadProfile();
         } else {
           const error = await response.json().catch(() => ({}));
-          showStatus('profile-status', error.error || `Failed to update profile (server returned ${response.status}).`, true);
+          showStatus('profile-status', error.detail || error.error || `Failed to update profile (server returned ${response.status}).`, true);
         }
       });
 
