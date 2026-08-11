@@ -282,8 +282,8 @@ async function initializeDatabase() {
       INSERT INTO projects (title, tag, description, image, link)
       VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10), ($11, $12, $13, $14, $15)
     `, [
-      'National Voting System', 'Gov Tech', 'A secure digital voting platform built for nationwide elections and easy voter access.', 'images/Screenshot 2026-07-29 020836.png', '#projects',
       'E-Commerce App', 'E-Commerce', 'An online store with product browsing, cart management, and a secure checkout flow, built for a smooth shopping experience on any device.', 'images/Screenshot 2026-07-29 021550.png', '#projects',
+      'National Voting System', 'Gov Tech', 'A secure digital voting platform built for nationwide elections and easy voter access.', 'images/Screenshot 2026-07-29 020836.png', '#projects',
       'Portfolio Website', 'Portfolio', 'This portfolio site showcases my design approach, visual UI, and project storytelling.', 'images/Screenshot 2026-07-29 023506.png', '#projects'
     ]);
   }
@@ -392,7 +392,7 @@ app.get('/api/cv', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/projects', asyncHandler(async (req, res) => {
-  const result = await query('SELECT * FROM projects ORDER BY created_at DESC');
+  const result = await query('SELECT * FROM projects ORDER BY id ASC');
   res.json(result.rows);
 }));
 
