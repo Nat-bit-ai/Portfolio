@@ -327,7 +327,16 @@ function toDataUrl(file) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(rootDir));
+
+// Only routes that actually touch Postgres need the DB to be initialized.
+// /admin, the login/session endpoints, and the HTML catch-all just check a
+// signed cookie or serve a file -- they must keep working even if the DB
+// env vars aren't configured yet, otherwise a DB outage/misconfig makes the
+// whole admin login unreachable (500 instead of the login form).
+const DB_FREE_PATHS = new Set(['/api/admin/login', '/api/admin/logout', '/api/admin/session', '/api/health']);
 app.use(asyncHandler(async (req, res, next) => {
+  const needsDb = req.path.startsWith('/api') && !DB_FREE_PATHS.has(req.path);
+  if (!needsDb) return next();
   await ensureInitialized();
   next();
 }));
