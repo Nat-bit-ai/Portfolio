@@ -8,6 +8,7 @@
         "includeFiles": [
           "index.html",
           "admin.html",
+          "index.js",
           "styles.css",
           "images/**",
           "*.pdf"
