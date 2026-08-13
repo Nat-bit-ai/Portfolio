@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet"/>
+    <title>Portfolio Natnael</title>
+</head>
+<body>
+  <section id="home" class="wallpaper-container">
+    <video autoplay loop muted playsinline class="bg-video">
+      <source src="images/binary-code-falling.3840x2160.mp4" type="video/mp4">
+    </video>
+
+    <header class="content">
+      <div class="navbar">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="16" rx="3" stroke="#8B5CF6" stroke-width="1.8" fill="rgba(15,23,42,0.9)"/><path d="M8 9L11 12L8 15" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 15H16" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <h2>Natnael.dev</h2>
+        </div>
+
+        <nav class="nav-links">
+          <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#projects">Projects</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </nav>
+
+        <div class="nav-actions">
+          <a id="cv-download-link" href="5th Batch CTC Program Schedule for Development.pdf" class="cv-link" download>
+            <span class="download-icon" aria-hidden="true">⬇</span>
+            <span>Download CV</span>
+          </a>
+          <button class="menu-toggle" aria-label="Toggle navigation">☰</button>
+        </div>
+      </div>
+
+      <div class="hero-section">
+        <div class="hero-card">
+          <div class="hero-left">
+            <p class="eyebrow">Hi, I’m</p>
+            <h1 id="profile-name">Natnael <span class="highlight">Zerihun</span></h1>
+            <p id="profile-title" class="hero-role">Frontend Developer</p>
+            <p id="profile-description" class="description">
+              I build responsive and user-friendly webpages using HTML , CSS and JavaScript with a focus on improving performance and creating better design.
+            </p>
+            <div class="hero-actions">
+              <a href="#projects" class="primary-btn">View Projects</a>
+              <a href="#contact" class="secondary-btn">Contact Me</a>
+            </div>
+            <div class="hero-socials">
+              <a href="https://github.com/Nat-bit-ai" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <span class="social-icon"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.28 3.44 9.75 8.21 11.33.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.73-4.04-1.61-4.04-1.61-.55-1.4-1.35-1.77-1.35-1.77-1.1-.75.08-.74.08-.74 1.22.09 1.86 1.25 1.86 1.25 1.08 1.85 2.84 1.32 3.53 1.01.11-.78.42-1.32.76-1.62-2.67-.3-5.47-1.33-5.47-5.9 0-1.3.46-2.36 1.22-3.19-.12-.3-.53-1.52.12-3.16 0 0 .99-.32 3.25 1.22a11.3 11.3 0 0 1 2.96-.4c1.01.01 2.03.14 2.96.4 2.27-1.54 3.25-1.22 3.25-1.22.65 1.64.24 2.86.12 3.16.76.83 1.22 1.9 1.22 3.19 0 4.58-2.81 5.59-5.48 5.89.43.37.82 1.1.82 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58A11.998 11.998 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg></span>
+                GitHub
+              </a>
+              <a href="mailto:nathyzer21@gmail.com" aria-label="Email">
+                <span class="social-icon"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 4.24-8 4.99-8-4.99V6l8 5 8-5v2.24Z"/></svg></span>
+                Email
+              </a>
+            </div>
+            <div class="status-grid">
+              <div class="status-card">
+                <span class="dot online"></span>
+                <div>
+                  <strong>Available</strong>
+                  <p>Open for freelance work</p>
+                </div>
+              </div>
+              <div class="status-card">
+                <span class="dot skill"></span>
+                <div>
+                  <strong>Focus</strong>
+                  <p>Frontend & UI systems</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="hero-image">
+              <img id="home-hero-image" src="images/photo_2026-02-26_07-03-17.jpg" alt="Natnael profile" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  </section>
+
+  <main>
+    <section id="about" class="about-section">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">About Me</p>
+          <h2 class="section-title">Frontend developer student applying for internships.</h2>
+        </div>
+        <a href="#projects" class="view-all-btn">Projects</a>
+      </div>
+
+      <div class="about-content">
+        <div class="about-card about-left">
+          <div class="card-head">
+            <p class="eyebrow">Overview</p>
+            <h3>Frontend developer.</h3>
+          </div>
+          <div class="card-body">
+            <p>
+              I am a 3rd-year Computer Science student at Addis Ababa University.
+            </p>
+            <p>
+              I build clean, responsive interfaces and I am actively applying for internship opportunities.
+            </p>
+          </div>
+          <div class="stats-row">
+            <div class="mini-card">
+              <span>3</span>
+              <p>Projects</p>
+            </div>
+            <div class="mini-card">
+              <span>1</span>
+              <p>Year exp</p>
+            </div>
+          </div>
+          <a href="#contact" class="secondary-btn read-more-btn">Contact</a>
+        </div>
+
+        <div class="about-card about-right">
+          <div class="card-head skills-head">
+            <h3>Skills</h3>
+            <a href="#skills" class="view-all-btn small">View All</a>
+          </div>
+          <div id="tech-stack-grid" class="skills-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" class="projects-section">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">Featured Projects</p>
+          <h2 class="section-title">Selected projects that highlight my design and development skills.</h2>
+        </div>
+        <div class="project-controls">
+          <button class="project-nav prev" aria-label="Previous project">‹</button>
+          <button class="project-nav next" aria-label="Next project">›</button>
+        </div>
+      </div>
+      <div class="project-carousel" id="projectCarousel">
+        <article class="project-card active" data-index="0">
+          <div class="project-code-label"><span>&lt;</span>projects<span>&gt;</span><span class="project-code-icon">›</span></div>
+          <img src="images/Screenshot 2026-07-29 021550.png" alt="E-Commerce app" />
+          <div class="project-info">
+            <span class="project-tag">E-Commerce</span>
+            <h3>E-Commerce App</h3>
+            <p>An online store with product browsing, cart management, and a secure checkout flow, built for a smooth shopping experience on any device.</p>
+            <a href="#projects" class="project-link">View project</a>
+          </div>
+        </article>
+        <article class="project-card" data-index="1">
+          <div class="project-code-label"><span>&lt;</span>projects<span>&gt;</span><span class="project-code-icon">›</span></div>
+          <img src="images/Screenshot 2026-07-29 020836.png" alt="National voting system" />
+          <div class="project-info">
+            <span class="project-tag">Gov Tech</span>
+            <h3>National Voting System</h3>
+            <p>A secure digital voting platform built for nationwide elections and easy voter access.</p>
+            <a href="#projects" class="project-link">View project</a>
+          </div>
+        </article>
+        <article class="project-card" data-index="2">
+          <div class="project-code-label"><span>&lt;</span>projects<span>&gt;</span><span class="project-code-icon">›</span></div>
+          <img src="images/Screenshot 2026-07-29 023506.png" alt="Portfolio website preview" />
+          <div class="project-info">
+            <span class="project-tag">Portfolio</span>
+            <h3>Portfolio Website</h3>
+            <p>This portfolio site showcases my design approach, visual UI, and project storytelling.</p>
+            <a href="#projects" class="project-link">View project</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+
+    <section id="contact" class="contact-section">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">Let’s Work Together</p>
+          <h2 class="section-title">Have a project in mind? Send a message and I’ll get back to you.</h2>
+        </div>
+      </div>
+      <div class="contact-grid">
+        <form id="my-form" class="contact-form">
+          <input id="name" type="text" placeholder="Name" />
+          <input type="email" placeholder="Email" />
+          <textarea rows="5" placeholder="Message"></textarea>
+          <button type="submit" class="primary-btn">Send Message</button>
+        </form>
+        <div class="contact-info">
+          <div class="info-block"><strong>Email</strong><p id="contact-email">nathyzer21@gmail.com</p></div>
+          <div class="info-block"><strong>Phone</strong><p id="contact-phone">+251 967 323 308</p></div>
+          <div class="info-block"><strong>Location</strong><p id="contact-location">Addis Ababa, Ethiopia</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-admin-box">
+      <span>Edit portfolio</span>
+      <button type="button" id="admin-link" class="admin-btn footer-admin-btn">Admin</button>
+    </div>
+    <div class="footer-meta">
+      <p>© 2025 Natnael Zerihun. Built with modern web design.</p>
+      <a href="#home" class="back-to-top">Back to Top</a>
+    </div>
+  </footer>
+
+  <a href="#home" class="back-to-top-btn" aria-label="Scroll back to top">↑</a>
+
+  <script src="index.js"></script>
+
+</body>
+</html>

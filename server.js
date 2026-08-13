@@ -24,9 +24,15 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const rootDir = __dirname;
 const publicDir = path.join(rootDir, 'public');
-const dataDir = path.join(rootDir, 'data');
+// Vercel's deployed filesystem is read-only except /tmp. Writing to the
+// bundled `data/` folder throws EROFS in production, so fall back to /tmp
+// there. NOTE: /tmp is wiped between cold starts/deployments, so edits made
+// through /admin will NOT persist on Vercel until this is backed by a real
+// database (e.g. Postgres, per database.sql) or a storage service.
+const writableRoot = process.env.VERCEL ? '/tmp' : rootDir;
+const dataDir = path.join(writableRoot, 'data');
 const storageFile = process.env.STORAGE_FILE
-  ? path.resolve(rootDir, process.env.STORAGE_FILE)
+  ? path.resolve(writableRoot, process.env.STORAGE_FILE)
   : path.join(dataDir, 'store.json');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '@Nathy1821';
@@ -113,9 +119,18 @@ function defaultStore() {
 
 function ensureStore() {
   fs.mkdirSync(path.dirname(storageFile), { recursive: true });
-  if (!fs.existsSync(storageFile)) {
-    writeStore(defaultStore());
+  if (fs.existsSync(storageFile)) return;
+  // On Vercel, storageFile lives under /tmp and starts empty on every cold
+  // start. Seed it from the bundled data/store.json (included via
+  // vercel.json -> includeFiles) so real content shows up instead of the
+  // hardcoded defaults. Remember: /tmp doesn't persist edits between
+  // invocations/deployments — see the writableRoot comment above.
+  const bundledSeed = path.join(rootDir, 'data', 'store.json');
+  if (bundledSeed !== storageFile && fs.existsSync(bundledSeed)) {
+    fs.copyFileSync(bundledSeed, storageFile);
+    return;
   }
+  writeStore(defaultStore());
 }
 
 function readStore() {
@@ -259,6 +274,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(publicDir));
+app.use('/images', express.static(path.join(rootDir, 'images')));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', storage: 'local-json', time: now() });
@@ -429,9 +445,14 @@ app.use((error, req, res, next) => {
 });
 
 ensureStore();
-app.listen(PORT, () => {
-  console.log(`Portfolio running at http://localhost:${PORT}`);
-  console.log(`Local data store: ${storageFile}`);
-});
+if (require.main === module) {
+  // Only bind a port when run directly (npm start / node server.js).
+  // On Vercel, @vercel/node imports this file as a module and calls the
+  // exported app itself, so listening here is unnecessary and skipped.
+  app.listen(PORT, () => {
+    console.log(`Portfolio running at http://localhost:${PORT}`);
+    console.log(`Local data store: ${storageFile}`);
+  });
+}
 
 module.exports = app;
