@@ -1,25 +1,58 @@
-# Natnael Portfolio — fixed package
+# Natnael Portfolio — Postgres-backed
 
-This copy fixes the admin editor error caused by the original server requiring PostgreSQL at `127.0.0.1:5432`.
+## What changed from the version you had
 
-## What changed
+The old `server.js` wrote to a local JSON file (`data/store.json`). On Vercel
+that file lived in `/tmp`, which is wiped on every cold start and every
+deployment — that's why admin edits didn't show up on the homepage, default
+fields looked wrong, and contact messages never reached `/admin`.
 
-- Uses a persistent local JSON store at `data/store.json`.
-- Seeds the default profile, projects, and homepage settings automatically.
-- Profile values load in the admin page even when PostgreSQL is not installed or running.
-- Profile edits, project edits, deletes, homepage settings, messages, and uploads persist between restarts.
-- Keeps the original portfolio design and admin page.
-- Does not include any uploaded environment secrets.
+This version replaces that with real Postgres queries (`db.js` +
+`server.js`), matching `database.sql`. Nothing in `public/` needed to
+change — the frontend already just calls `/api/...`, so it works as-is.
 
-## Run it
+## 1. Get a Postgres database Vercel can actually reach
 
-1. Install Node.js 18 or newer.
-2. Open a terminal in this folder.
-3. Run `npm install`.
-4. Copy `.env.example` to `.env`.
-5. Set `ADMIN_PASSWORD` and `ADMIN_SECRET` in `.env`.
-6. Run `npm start`.
-7. Open `http://localhost:3000`.
-8. Open `http://localhost:3000/admin` to edit the profile.
+A database running only on your own computer (`PGHOST=localhost`) will
+**not** work once deployed — Vercel's servers can't reach your machine.
+Use a free hosted Postgres instead:
 
-The app does not need PostgreSQL in this mode. Do not copy the old `PGHOST=127.0.0.1` settings into this package unless you intentionally add a PostgreSQL adapter.
+- [Neon](https://neon.tech) — easiest with Vercel, generous free tier
+- [Supabase](https://supabase.com), [Railway](https://railway.app), or
+  [Render](https://render.com) all work the same way
+
+Create a project, then copy the connection string it gives you (looks like
+`postgresql://user:password@host/dbname?sslmode=require`).
+
+## 2. Load the schema
+
+Run `database.sql` against that database once, e.g.:
+
+```
+psql "postgresql://user:password@host/dbname?sslmode=require" -f database.sql
+```
+
+(Most providers also let you paste SQL into a web-based query editor in
+their dashboard if you don't have `psql` installed.)
+
+## 3. Configure environment variables
+
+Locally: copy `.env.example` to `.env`, fill in `DATABASE_URL` (from step 1),
+`ADMIN_PASSWORD`, and `ADMIN_SECRET`.
+
+**On Vercel:** `.env` is git-ignored and never gets deployed. You must add
+the same variables in your Vercel project — **Settings → Environment
+Variables** — for `DATABASE_URL`, `ADMIN_PASSWORD`, and `ADMIN_SECRET`, then
+redeploy. This is the step that's easy to miss and will otherwise leave
+production connecting to nothing.
+
+## 4. Run it
+
+```
+npm install
+npm start
+```
+
+Open `http://localhost:3000`, and `http://localhost:3000/admin` to edit
+content. Once `DATABASE_URL` is set on Vercel and you redeploy, admin edits
+and contact messages will persist there too.

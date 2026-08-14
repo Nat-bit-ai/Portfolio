@@ -19,155 +19,32 @@ loadDotEnv();
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
+const pool = require('./db');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const rootDir = __dirname;
 const publicDir = path.join(rootDir, 'public');
-// Vercel's deployed filesystem is read-only except /tmp. Writing to the
-// bundled `data/` folder throws EROFS in production, so fall back to /tmp
-// there. NOTE: /tmp is wiped between cold starts/deployments, so edits made
-// through /admin will NOT persist on Vercel until this is backed by a real
-// database (e.g. Postgres, per database.sql) or a storage service.
-const writableRoot = process.env.VERCEL ? '/tmp' : rootDir;
-const dataDir = path.join(writableRoot, 'data');
-const storageFile = process.env.STORAGE_FILE
-  ? path.resolve(writableRoot, process.env.STORAGE_FILE)
-  : path.join(dataDir, 'store.json');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '@Nathy1821';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'change-this-admin-secret';
 const ADMIN_COOKIE = 'admin_token';
 const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
-const DEFAULT_HOMEPAGE_SETTINGS = {
-  heroImage: '',
-  techStacks: [
-    { name: 'HTML', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
-    { name: 'CSS', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg' },
-    { name: 'JavaScript', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg' },
-    { name: 'Python', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg' },
-    { name: 'MySQL', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg' },
-    { name: 'C++', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg' },
-    { name: 'PHP', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg' },
-    { name: 'Git', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg' },
-    { name: 'GitHub', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg' },
-    { name: 'Java', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg' },
-    { name: 'React', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg' },
-    { name: 'Tailwind CSS', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg' }
-  ]
-};
-
-function now() {
-  return new Date().toISOString();
-}
-
-function defaultStore() {
-  const timestamp = now();
-  return {
-    profile: {
-      id: 1,
-      name: 'Natnael Zerihun',
-      title: 'Frontend Developer',
-      description: 'I build responsive and user-friendly webpages using HTML, CSS and JavaScript with a focus on improving performance and creating better design.',
-      email: 'nathyzer21@gmail.com',
-      phone: '+251 967 323 308',
-      location: 'Addis Ababa, Ethiopia',
-      github: 'https://github.com/Nat-bit-ai',
-      cv_file_name: '',
-      cv_url: '',
-      created_at: timestamp,
-      updated_at: timestamp
-    },
-    projects: [
-      {
-        id: 1,
-        title: 'E-Commerce App',
-        tag: 'E-Commerce',
-        description: 'An online store with product browsing, cart management, and a smooth shopping experience on any device.',
-        image: 'images/default-project.jpg',
-        link: '#projects',
-        created_at: timestamp,
-        updated_at: timestamp
-      },
-      {
-        id: 2,
-        title: 'National Voting System',
-        tag: 'Gov Tech',
-        description: 'A secure digital voting platform built for nationwide elections and easy voter access.',
-        image: 'images/default-project.jpg',
-        link: '#projects',
-        created_at: timestamp,
-        updated_at: timestamp
-      },
-      {
-        id: 3,
-        title: 'Portfolio Website',
-        tag: 'Portfolio',
-        description: 'A personal portfolio that showcases my design approach, visual UI, and project storytelling.',
-        image: 'images/default-project.jpg',
-        link: '#projects',
-        created_at: timestamp,
-        updated_at: timestamp
-      }
-    ],
-    homepage: DEFAULT_HOMEPAGE_SETTINGS,
-    messages: [],
-    nextIds: { project: 4, message: 1 }
-  };
-}
-
-function ensureStore() {
-  fs.mkdirSync(path.dirname(storageFile), { recursive: true });
-  if (fs.existsSync(storageFile)) return;
-  // On Vercel, storageFile lives under /tmp and starts empty on every cold
-  // start. Seed it from the bundled data/store.json (included via
-  // vercel.json -> includeFiles) so real content shows up instead of the
-  // hardcoded defaults. Remember: /tmp doesn't persist edits between
-  // invocations/deployments — see the writableRoot comment above.
-  const bundledSeed = path.join(rootDir, 'data', 'store.json');
-  if (bundledSeed !== storageFile && fs.existsSync(bundledSeed)) {
-    fs.copyFileSync(bundledSeed, storageFile);
-    return;
-  }
-  writeStore(defaultStore());
-}
-
-function readStore() {
-  ensureStore();
-  try {
-    const parsed = JSON.parse(fs.readFileSync(storageFile, 'utf8'));
-    const seeded = defaultStore();
-    return {
-      ...seeded,
-      ...parsed,
-      profile: { ...seeded.profile, ...(parsed.profile || {}) },
-      homepage: { ...seeded.homepage, ...(parsed.homepage || {}) },
-      projects: Array.isArray(parsed.projects) ? parsed.projects : seeded.projects,
-      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
-      nextIds: { ...seeded.nextIds, ...(parsed.nextIds || {}) }
-    };
-  } catch (error) {
-    console.error(`Could not read ${storageFile}; restoring defaults:`, error.message);
-    const fresh = defaultStore();
-    writeStore(fresh);
-    return fresh;
-  }
-}
-
-function writeStore(store) {
-  fs.mkdirSync(path.dirname(storageFile), { recursive: true });
-  const temporaryFile = `${storageFile}.tmp`;
-  fs.writeFileSync(temporaryFile, JSON.stringify(store, null, 2));
-  fs.renameSync(temporaryFile, storageFile);
-}
-
-function updateStore(mutator) {
-  const store = readStore();
-  const result = mutator(store);
-  writeStore(store);
-  return result;
-}
+const DEFAULT_TECH_STACKS = [
+  { name: 'HTML', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
+  { name: 'CSS', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg' },
+  { name: 'JavaScript', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg' },
+  { name: 'Python', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg' },
+  { name: 'MySQL', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg' },
+  { name: 'C++', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg' },
+  { name: 'PHP', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg' },
+  { name: 'Git', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg' },
+  { name: 'GitHub', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg' },
+  { name: 'Java', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg' },
+  { name: 'React', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg' },
+  { name: 'Tailwind CSS', image: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg' }
+];
 
 function parseCookies(req) {
   const cookies = {};
@@ -241,7 +118,7 @@ function parseTechStacks(rawValue) {
       image: String(item.image || '').trim()
     })).filter((item) => item.name);
   }
-  if (typeof rawValue !== 'string' || !rawValue.trim()) return DEFAULT_HOMEPAGE_SETTINGS.techStacks;
+  if (typeof rawValue !== 'string' || !rawValue.trim()) return DEFAULT_TECH_STACKS;
   try {
     const parsed = JSON.parse(rawValue);
     if (Array.isArray(parsed)) return parseTechStacks(parsed);
@@ -269,6 +146,53 @@ function publicProfile(profile) {
   };
 }
 
+// --- Postgres-backed data access ------------------------------------------
+// Every function below talks straight to Postgres so data survives across
+// serverless invocations and deployments (unlike the old /tmp JSON file).
+
+async function ensureSeed() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      INSERT INTO profile (id, name, title, description, email, phone, location, github)
+      VALUES (1, 'Natnael Zerihun', 'Frontend Developer',
+        'I build responsive and user-friendly webpages using HTML, CSS and JavaScript with a focus on improving performance and creating better design.',
+        'nathyzer21@gmail.com', '+251 967 323 308', 'Addis Ababa, Ethiopia', 'https://github.com/Nat-bit-ai')
+      ON CONFLICT (id) DO NOTHING
+    `);
+    await client.query(`
+      INSERT INTO homepage_settings (id, hero_image, tech_stacks)
+      VALUES (1, '', $1::jsonb)
+      ON CONFLICT (id) DO NOTHING
+    `, [JSON.stringify(DEFAULT_TECH_STACKS)]);
+    const { rows } = await client.query('SELECT COUNT(*)::int AS count FROM projects');
+    if (rows[0].count === 0) {
+      await client.query(`
+        INSERT INTO projects (title, tag, description, image, link) VALUES
+        ('E-Commerce App', 'E-Commerce', 'An online store with product browsing, cart management, and a smooth shopping experience on any device.', 'images/default-project.jpg', '#projects'),
+        ('National Voting System', 'Gov Tech', 'A secure digital voting platform built for nationwide elections and easy voter access.', 'images/default-project.jpg', '#projects'),
+        ('Portfolio Website', 'Portfolio', 'A personal portfolio that showcases my design approach, visual UI, and project storytelling.', 'images/default-project.jpg', '#projects')
+      `);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+async function getProfile() {
+  const { rows } = await pool.query('SELECT * FROM profile WHERE id = 1');
+  return rows[0];
+}
+
+async function getHomepage() {
+  const { rows } = await pool.query('SELECT hero_image, tech_stacks FROM homepage_settings WHERE id = 1');
+  const row = rows[0] || { hero_image: '', tech_stacks: DEFAULT_TECH_STACKS };
+  return {
+    heroImage: row.hero_image || '',
+    techStacks: Array.isArray(row.tech_stacks) && row.tech_stacks.length ? row.tech_stacks : DEFAULT_TECH_STACKS
+  };
+}
+
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 app.use(express.json({ limit: '8mb' }));
@@ -276,8 +200,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(publicDir));
 app.use('/images', express.static(path.join(rootDir, 'images')));
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', storage: 'local-json', time: now() });
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', storage: 'postgres', time: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ status: 'error', storage: 'postgres', detail: error.message });
+  }
 });
 
 app.post('/api/admin/login', (req, res) => {
@@ -295,137 +224,161 @@ app.post('/api/admin/logout', (req, res) => {
 
 app.get('/api/admin/session', (req, res) => res.json({ authenticated: isAdminRequest(req) }));
 
-app.get('/api/profile', (req, res) => res.json(publicProfile(readStore().profile)));
-
-app.get('/api/cv', (req, res) => {
-  const profile = readStore().profile;
-  res.json({ fileName: profile.cv_file_name || '', url: profile.cv_url || '' });
+app.get('/api/profile', async (req, res, next) => {
+  try {
+    res.json(publicProfile(await getProfile()));
+  } catch (error) { next(error); }
 });
 
-app.get('/api/projects', (req, res) => res.json(readStore().projects));
-
-app.get('/api/homepage', (req, res) => {
-  const homepage = readStore().homepage;
-  res.json({
-    heroImage: homepage.heroImage || '',
-    techStacks: Array.isArray(homepage.techStacks) && homepage.techStacks.length
-      ? homepage.techStacks : DEFAULT_HOMEPAGE_SETTINGS.techStacks
-  });
+app.get('/api/cv', async (req, res, next) => {
+  try {
+    const profile = await getProfile();
+    res.json({ fileName: profile.cv_file_name || '', url: profile.cv_url || '' });
+  } catch (error) { next(error); }
 });
 
-app.put('/api/profile', requireAdmin, (req, res) => {
-  const updated = updateStore((store) => {
-    store.profile = {
-      ...store.profile,
-      name: req.body.name ?? store.profile.name,
-      title: req.body.title ?? store.profile.title,
-      description: req.body.description ?? store.profile.description,
-      email: req.body.email ?? store.profile.email,
-      phone: req.body.phone ?? store.profile.phone,
-      location: req.body.location ?? store.profile.location,
-      github: req.body.github ?? store.profile.github,
-      updated_at: now()
-    };
-    return store.profile;
-  });
-  res.json(publicProfile(updated));
+app.get('/api/projects', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM projects ORDER BY id');
+    res.json(rows);
+  } catch (error) { next(error); }
 });
 
-app.post('/api/cv', requireAdmin, upload.single('cvFile'), (req, res) => {
-  const updated = updateStore((store) => {
+app.get('/api/homepage', async (req, res, next) => {
+  try {
+    res.json(await getHomepage());
+  } catch (error) { next(error); }
+});
+
+app.put('/api/profile', requireAdmin, async (req, res, next) => {
+  try {
+    const current = await getProfile();
+    const { rows } = await pool.query(
+      `UPDATE profile SET name=$1, title=$2, description=$3, email=$4, phone=$5, location=$6, github=$7, updated_at=NOW()
+       WHERE id = 1 RETURNING *`,
+      [
+        req.body.name ?? current.name,
+        req.body.title ?? current.title,
+        req.body.description ?? current.description,
+        req.body.email ?? current.email,
+        req.body.phone ?? current.phone,
+        req.body.location ?? current.location,
+        req.body.github ?? current.github
+      ]
+    );
+    res.json(publicProfile(rows[0]));
+  } catch (error) { next(error); }
+});
+
+app.post('/api/cv', requireAdmin, upload.single('cvFile'), async (req, res, next) => {
+  try {
+    const current = await getProfile();
+    let fileName = current.cv_file_name;
+    let url = current.cv_url;
     if (req.file) {
-      store.profile.cv_file_name = req.file.originalname;
-      store.profile.cv_url = toDataUrl(req.file);
+      fileName = req.file.originalname;
+      url = toDataUrl(req.file);
     } else if (req.body?.fileName || req.body?.url) {
-      store.profile.cv_file_name = req.body.fileName || store.profile.cv_file_name;
-      store.profile.cv_url = req.body.url || store.profile.cv_url;
+      fileName = req.body.fileName || fileName;
+      url = req.body.url || url;
     }
-    store.profile.updated_at = now();
-    return store.profile;
-  });
-  if (!updated.cv_url) return res.status(400).json({ error: 'No CV file uploaded.' });
-  res.json({ fileName: updated.cv_file_name, url: updated.cv_url });
+    if (!url) return res.status(400).json({ error: 'No CV file uploaded.' });
+    const { rows } = await pool.query(
+      'UPDATE profile SET cv_file_name=$1, cv_url=$2, updated_at=NOW() WHERE id = 1 RETURNING cv_file_name, cv_url',
+      [fileName, url]
+    );
+    res.json({ fileName: rows[0].cv_file_name, url: rows[0].cv_url });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/projects', requireAdmin, upload.single('projectImage'), (req, res) => {
+app.post('/api/projects', requireAdmin, upload.single('projectImage'), async (req, res, next) => {
   if (!req.body?.title || !req.body?.description) {
     return res.status(400).json({ error: 'Title and description are required.' });
   }
-  const project = updateStore((store) => {
-    const timestamp = now();
-    const item = {
-      id: store.nextIds.project++,
-      title: req.body.title,
-      tag: req.body.tag || 'General',
-      description: req.body.description,
-      image: req.file ? toDataUrl(req.file) : (req.body.image || 'images/default-project.jpg'),
-      link: req.body.link || '#projects',
-      created_at: timestamp,
-      updated_at: timestamp
-    };
-    store.projects.push(item);
-    return item;
-  });
-  res.status(201).json(project);
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO projects (title, tag, description, image, link)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [
+        req.body.title,
+        req.body.tag || 'General',
+        req.body.description,
+        req.file ? toDataUrl(req.file) : (req.body.image || 'images/default-project.jpg'),
+        req.body.link || '#projects'
+      ]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) { next(error); }
 });
 
-app.put('/api/projects/:id', requireAdmin, upload.single('projectImage'), (req, res) => {
-  const project = updateStore((store) => {
-    const item = store.projects.find((entry) => String(entry.id) === String(req.params.id));
-    if (!item) return null;
-    item.title = req.body.title || item.title;
-    item.tag = req.body.tag || item.tag;
-    item.description = req.body.description || item.description;
-    item.image = req.file ? toDataUrl(req.file) : (req.body.image || item.image);
-    item.link = req.body.link || item.link;
-    item.updated_at = now();
-    return item;
-  });
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  res.json(project);
+app.put('/api/projects/:id', requireAdmin, upload.single('projectImage'), async (req, res, next) => {
+  try {
+    const { rows: existingRows } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    const existing = existingRows[0];
+    if (!existing) return res.status(404).json({ error: 'Project not found.' });
+    const { rows } = await pool.query(
+      `UPDATE projects SET title=$1, tag=$2, description=$3, image=$4, link=$5, updated_at=NOW()
+       WHERE id = $6 RETURNING *`,
+      [
+        req.body.title || existing.title,
+        req.body.tag || existing.tag,
+        req.body.description || existing.description,
+        req.file ? toDataUrl(req.file) : (req.body.image || existing.image),
+        req.body.link || existing.link,
+        req.params.id
+      ]
+    );
+    res.json(rows[0]);
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/projects/:id', requireAdmin, (req, res) => {
-  const deleted = updateStore((store) => {
-    const index = store.projects.findIndex((entry) => String(entry.id) === String(req.params.id));
-    return index === -1 ? null : store.projects.splice(index, 1)[0];
-  });
-  if (!deleted) return res.status(404).json({ error: 'Project not found.' });
-  res.json({ message: 'Project deleted successfully.' });
+app.delete('/api/projects/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('DELETE FROM projects WHERE id = $1 RETURNING *', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Project not found.' });
+    res.json({ message: 'Project deleted successfully.' });
+  } catch (error) { next(error); }
 });
 
-app.put('/api/homepage', requireAdmin, upload.single('homepageImage'), (req, res) => {
-  const homepage = updateStore((store) => {
-    store.homepage = {
-      ...store.homepage,
-      heroImage: req.file ? toDataUrl(req.file) : (req.body.heroImage || store.homepage.heroImage || ''),
-      techStacks: parseTechStacks(req.body.techStacks || store.homepage.techStacks)
-    };
-    return store.homepage;
-  });
-  res.json(homepage);
+app.put('/api/homepage', requireAdmin, upload.single('homepageImage'), async (req, res, next) => {
+  try {
+    const current = await getHomepage();
+    const heroImage = req.file ? toDataUrl(req.file) : (req.body.heroImage || current.heroImage || '');
+    const techStacks = parseTechStacks(req.body.techStacks || current.techStacks);
+    await pool.query(
+      `INSERT INTO homepage_settings (id, hero_image, tech_stacks, updated_at) VALUES (1, $1, $2::jsonb, NOW())
+       ON CONFLICT (id) DO UPDATE SET hero_image = EXCLUDED.hero_image, tech_stacks = EXCLUDED.tech_stacks, updated_at = NOW()`,
+      [heroImage, JSON.stringify(techStacks)]
+    );
+    res.json({ heroImage, techStacks });
+  } catch (error) { next(error); }
 });
 
-app.get('/api/messages', requireAdmin, (req, res) => res.json(readStore().messages.slice().reverse()));
+app.get('/api/messages', requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM messages ORDER BY id DESC');
+    res.json(rows);
+  } catch (error) { next(error); }
+});
 
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res, next) => {
   const { name, email, message } = req.body || {};
   if (!name || !email || !message) return res.status(400).json({ error: 'Name, email and message are required.' });
-  const created = updateStore((store) => {
-    const item = { id: store.nextIds.message++, name, email, message, created_at: now() };
-    store.messages.push(item);
-    return item;
-  });
-  res.status(201).json(created);
+  try {
+    const { rows } = await pool.query(
+      'INSERT INTO messages (name, email, message) VALUES ($1, $2, $3) RETURNING *',
+      [name, email, message]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/messages/:id', requireAdmin, (req, res) => {
-  const deleted = updateStore((store) => {
-    const index = store.messages.findIndex((entry) => String(entry.id) === String(req.params.id));
-    return index === -1 ? null : store.messages.splice(index, 1)[0];
-  });
-  if (!deleted) return res.status(404).json({ error: 'Message not found.' });
-  res.json({ message: 'Message deleted successfully.' });
+app.delete('/api/messages/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('DELETE FROM messages WHERE id = $1 RETURNING *', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Message not found.' });
+    res.json({ message: 'Message deleted successfully.' });
+  } catch (error) { next(error); }
 });
 
 app.get('/admin', (req, res) => {
@@ -444,14 +397,14 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'Internal server error.', detail: error.message });
 });
 
-ensureStore();
+ensureSeed().catch((error) => console.error('Seed check failed (will retry on next request):', error.message));
+
 if (require.main === module) {
   // Only bind a port when run directly (npm start / node server.js).
   // On Vercel, @vercel/node imports this file as a module and calls the
   // exported app itself, so listening here is unnecessary and skipped.
   app.listen(PORT, () => {
     console.log(`Portfolio running at http://localhost:${PORT}`);
-    console.log(`Local data store: ${storageFile}`);
   });
 }
 
