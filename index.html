@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preload" as="image" href="/textures/paper-texture.webp" type="image/webp" fetchpriority="high" crossorigin="anonymous">
+  <link rel="icon" type="image/png" href="/favico.png" />
+  <link rel="apple-touch-icon" href="/favico.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fafafa" />
+
+  <!-- SEO Meta Tags -->
+  <title>Natnael Zerihun | Frontend Developer Portfolio</title>
+  <meta name="description" content="Interactive 3D portfolio of Natnael Zerihun, a frontend developer and Computer Science student in Addis Ababa, Ethiopia." />
+  <meta name="author" content="Natnael Zerihun" />
+  <meta property="og:title" content="Natnael Zerihun | Frontend Developer Portfolio" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Natnael Zerihun Portfolio" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Google Fonts: Hand-drawn + Primary -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Gloria+Hallelujah&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Preload bazowych tekstur używanych w preloaderze -->
+
+  <style>
+    /* Absolute SEO text hiding - completely accessible to Googlebot, invisible to users */
+    .sr-only-seo {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+  </style>
+</head>
+
+
+<body>
+  <!-- SEO fallback for the WebGL canvas -->
+  <div id="seo-content" class="sr-only-seo">
+    <main>
+      <h1>Natnael Zerihun | Frontend Developer</h1>
+      <p>I build responsive and user-friendly webpages using HTML, CSS and JavaScript with a focus on improving performance and creating better design.</p>
+      <section>
+        <h2>About</h2>
+        <p>I am a 3rd-year Computer Science student at Addis Ababa University, building clean, responsive interfaces and actively applying for internship opportunities.</p>
+      </section>
+      <section>
+        <h2>Projects</h2>
+        <ul>
+          <li>E-Commerce App: an online store with product browsing, cart management, and a smooth shopping experience on any device.</li>
+          <li>National Voting System: a secure digital voting platform built for nationwide elections and easy voter access.</li>
+          <li>Portfolio Website: a personal portfolio showcasing design approach, visual UI, and project storytelling.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Skills</h2>
+        <p>HTML, CSS, JavaScript, React, Tailwind CSS, Python, PHP, MySQL, C++, Java, Git, GitHub.</p>
+      </section>
+      <section>
+        <h2>Contact</h2>
+        <p>Email: nathyzer21@gmail.com. Location: Addis Ababa, Ethiopia. GitHub: <a href="https://github.com/Nat-bit-ai">github.com/Nat-bit-ai</a></p>
+      </section>
+    </main>
+  </div>
+
+  <noscript>Please enable JavaScript to experience the interactive 3D portfolio of Natnael Zerihun.</noscript>
+
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

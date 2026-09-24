@@ -1,58 +1,31 @@
-# Natnael Portfolio — Postgres-backed
+# Natnael Zerihun | Interactive 3D Portfolio
 
-## What changed from the version you had
+An infinite corridor with doors into four rooms (React Three Fiber + GSAP + Vite), built on the MIT-licensed code of
+[portfolio-itom](https://github.com/ITomPoland/portfolio-itom). See `NOTICE.md`.
 
-The old `server.js` wrote to a local JSON file (`data/store.json`). On Vercel
-that file lived in `/tmp`, which is wiped on every cold start and every
-deployment — that's why admin edits didn't show up on the homepage, default
-fields looked wrong, and contact messages never reached `/admin`.
-
-This version replaces that with real Postgres queries (`db.js` +
-`server.js`), matching `database.sql`. Nothing in `public/` needed to
-change — the frontend already just calls `/api/...`, so it works as-is.
-
-## 1. Get a Postgres database Vercel can actually reach
-
-A database running only on your own computer (`PGHOST=localhost`) will
-**not** work once deployed — Vercel's servers can't reach your machine.
-Use a free hosted Postgres instead:
-
-- [Neon](https://neon.tech) — easiest with Vercel, generous free tier
-- [Supabase](https://supabase.com), [Railway](https://railway.app), or
-  [Render](https://render.com) all work the same way
-
-Create a project, then copy the connection string it gives you (looks like
-`postgresql://user:password@host/dbname?sslmode=require`).
-
-## 2. Load the schema
-
-Run `database.sql` against that database once, e.g.:
-
-```
-psql "postgresql://user:password@host/dbname?sslmode=require" -f database.sql
-```
-
-(Most providers also let you paste SQL into a web-based query editor in
-their dashboard if you don't have `psql` installed.)
-
-## 3. Configure environment variables
-
-Locally: copy `.env.example` to `.env`, fill in `DATABASE_URL` (from step 1),
-`ADMIN_PASSWORD`, and `ADMIN_SECRET`.
-
-**On Vercel:** `.env` is git-ignored and never gets deployed. You must add
-the same variables in your Vercel project — **Settings → Environment
-Variables** — for `DATABASE_URL`, `ADMIN_PASSWORD`, and `ADMIN_SECRET`, then
-redeploy. This is the step that's easy to miss and will otherwise leave
-production connecting to nothing.
-
-## 4. Run it
-
-```
+## Run
+```bash
 npm install
-npm start
+cp .env.example .env     # add your Web3Forms key so the contact form emails YOU
+npm run dev              # then: npm run build && npm run preview to test performance
 ```
+Node 20+. Add your deployed domain to `VITE_ALLOWED_ORIGINS` or the contact form will refuse to send.
 
-Open `http://localhost:3000`, and `http://localhost:3000/admin` to edit
-content. Once `DATABASE_URL` is set on Vercel and you redeploy, admin edits
-and contact messages will persist there too.
+## Where your data lives
+| Room | Edit | Notes |
+|---|---|---|
+| Gallery (projects) | `src/components/canvas/rooms/Gallery/GalleryRoom.jsx` (`FALLBACK_PROJECTS`) | Set each project's real `url`; tech logos are placeholders (HTML/CSS/JS) |
+| Studio (skills + links) | `src/components/canvas/rooms/Studio/contentData.js` | Monitors = projects, skill groups, GitHub, email |
+| About | `AboutRoom.jsx` (`STORY_MILESTONES`) and `InfiniteSkyManager.jsx` (`AWARDS_DATA`, island labels) | Certificates / Awards / More are empty until you add items |
+| Contact | `ContactRoom.jsx` (`SOCIAL_LINKS`) | LinkedIn, Facebook, Instagram are empty, so those barrels do nothing until filled |
+| Page titles / SEO | `index.html`, `src/hooks/useDocumentMeta.js` | |
+
+## Replace the placeholder art
+Every file in `public/textures/**` is a labeled placeholder with the correct proportions. Replace files in place (same name,
+same aspect ratio) with your own drawings/photos. Files ending in `_painted` are the colored reveal versions.
+Highest impact first: `corridor/doors/*`, `corridor/avatar_anim/*`, `about/*balon*` (skill balloons: his slots are
+Next.js/Three.js/GSAP/Figma etc., so make yours HTML/CSS/JS/React), `entrance/*`, `contact/*`, `studio/*`.
+Sounds in `public/sounds` are silent; drop in your own files with the same names.
+
+## Not included / removed
+PostHog analytics, the Sanity CMS connection (fallback data in code is used), his SEO build plugin and domain.
